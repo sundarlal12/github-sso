@@ -111,10 +111,14 @@ console.log(token);
     });
 
     res.json(response.data);
-  } catch (error) {
-    console.error('Error fetching repos:', error.message);
-    res.status(500).json({ error: 'Failed to fetch repositories' });
+  } 
+  
+  catch (error) {
+    console.error('GitHub API error:', error.response?.status, error.response?.data);
+    console.log('GitHub API error:', error.response?.status, error.response?.data);
+    res.status(500).json({ error: 'Failed to fetch repositories', details: error.response?.data });
   }
+  
 });
 
 
