@@ -27,33 +27,48 @@ const getHeaders = (token) => ({
 // });
 
 
-router.get('/repos', ensureAuthenticated, async (req, res) => {
-  console.log("Hit /repos route");
+router.get('/userinfo', ensureAuthenticated, async (req, res) => {
+  console.log("Hit /userinfo route");
+
   try {
-    // Fetch repositories
-    const reposResponse = await axios.get('https://api.github.com/user/repos', {
-      headers: getHeaders(req.session.token)
+    const headers = getHeaders(req.session.token);
+
+    // 1. Get basic user info
+    const userResponse = await axios.get('https://api.github.com/user', {
+      headers
     });
 
-    // Fetch emails
+    const userData = userResponse.data;
+
+    // 2. Get primary email
     const emailResponse = await axios.get('https://api.github.com/user/emails', {
-      headers: getHeaders(req.session.token)
+      headers
     });
 
-    // Find primary email
     const primaryEmailObj = emailResponse.data.find(email => email.primary && email.verified);
     const primaryEmail = primaryEmailObj ? primaryEmailObj.email : null;
 
-    res.json({
-      email: primaryEmail,
-      repos: reposResponse.data
+    // 3. Get user's organizations
+    const orgsResponse = await axios.get('https://api.github.com/user/orgs', {
+      headers
     });
+
+    // 4. Optional: Add custom email field (e.g., notification_email) if you need it
+    const responsePayload = {
+      user_data: userData,
+      orgs: orgsResponse.data,
+      collaborator_orgs: [], // You can populate this with another call if needed
+      email: primaryEmail
+    };
+
+    res.json(responsePayload);
 
   } catch (error) {
     console.error("GitHub API error:", error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch repositories or email' });
+    res.status(500).json({ error: 'Failed to fetch user info' });
   }
 });
+
 
 
 // Get branches for a repo
