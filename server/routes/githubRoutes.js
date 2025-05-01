@@ -14,17 +14,47 @@ const getHeaders = (token) => ({
 });
 
 // Get user repos
+// router.get('/repos', ensureAuthenticated, async (req, res) => {
+//   console.log("Hit /repos route");
+//   try {
+//     const response = await axios.get('https://api.github.com/user/repos', {
+//       headers: getHeaders(req.session.token)
+//     });
+//     res.json(response.data);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Failed to fetch repositories' });
+//   }
+// });
+
+
 router.get('/repos', ensureAuthenticated, async (req, res) => {
   console.log("Hit /repos route");
   try {
-    const response = await axios.get('https://api.github.com/user/repos', {
+    // Fetch repositories
+    const reposResponse = await axios.get('https://api.github.com/user/repos', {
       headers: getHeaders(req.session.token)
     });
-    res.json(response.data);
+
+    // Fetch emails
+    const emailResponse = await axios.get('https://api.github.com/user/emails', {
+      headers: getHeaders(req.session.token)
+    });
+
+    // Find primary email
+    const primaryEmailObj = emailResponse.data.find(email => email.primary && email.verified);
+    const primaryEmail = primaryEmailObj ? primaryEmailObj.email : null;
+
+    res.json({
+      email: primaryEmail,
+      repos: reposResponse.data
+    });
+
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch repositories' });
+    console.error("GitHub API error:", error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch repositories or email' });
   }
 });
+
 
 // Get branches for a repo
 router.get('/branches/:owner/:repo', ensureAuthenticated, async (req, res) => {
