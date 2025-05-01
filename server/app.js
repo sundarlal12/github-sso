@@ -34,7 +34,17 @@ app.use(cors({
 }));
 
 
-app.use(session({ secret: 'github-oauth', resave: false, saveUninitialized: true }));
+// app.use(session({ secret: 'github-oauth', resave: false, saveUninitialized: true }));
+app.use(session({
+  secret: 'github-oauth',
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    secure: true,         // required for HTTPS
+    sameSite: 'none'      // allows cross-origin cookies
+  }
+}));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
