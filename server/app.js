@@ -117,21 +117,46 @@ console.log(token);
   }
 });
 
-app.get('/api/github/user', (req, res) => {
+// app.get('/api/github/user', (req, res) => {
+//   if (req.isAuthenticated()) {
+
+//     const { username, displayName, photos, profileUrl, _json } = req.user;
+//     res.json({
+//       username,
+//       displayName,
+//       avatar: photos?.[0]?.value,
+//       profileUrl,
+//       email: _json?.email,
+//     });
+//   } else {
+//     res.status(401).json({ error: 'User not authenticated' });
+//   }
+// });
+
+
+app.get('/api/github/user', async (req, res) => {
   if (req.isAuthenticated()) {
-    const { username, displayName, photos, profileUrl, _json } = req.user;
-    res.json({
-      username,
-      displayName,
-      avatar: photos?.[0]?.value,
-      profileUrl,
-      email: _json?.email,
-    });
+    const token = req.user.accessToken; // Assuming `accessToken` is saved in `req.user`
+
+    try {
+      // Fetch the complete user profile from GitHub API
+      const response = await axios.get('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json',
+        },
+      });
+
+      // Return the entire GitHub user data (without email-related information)
+      res.json(response.data); // Send the complete user data
+    } catch (error) {
+      console.error('Error fetching user data:', error.message);
+      res.status(500).json({ error: 'Failed to fetch user data' });
+    }
   } else {
     res.status(401).json({ error: 'User not authenticated' });
   }
 });
-
 
 
 // app.get('/api/github/user', async (req, res) => {
