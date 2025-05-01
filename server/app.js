@@ -117,66 +117,66 @@ console.log(token);
   }
 });
 
-// app.get('/api/github/user', (req, res) => {
-//   if (req.isAuthenticated()) {
-//     const { username, displayName, photos, profileUrl, _json } = req.user;
-//     res.json({
-//       username,
-//       displayName,
-//       avatar: photos?.[0]?.value,
-//       profileUrl,
-//       email: _json?.email,
-//     });
-//   } else {
-//     res.status(401).json({ error: 'User not authenticated' });
-//   }
-// });
-
-
-
-app.get('/api/github/user', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token missing' });
-  }
-
-  try {
-    // Fetch full user profile
-    const userRes = await axios.get('https://api.github.com/user', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'YourAppName'
-      }
-    });
-
-    const userData = userRes.data;
-
-    // Fetch email separately (if email is private)
-    const emailRes = await axios.get('https://api.github.com/user/emails', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'YourAppName'
-      }
-    });
-
-    const primaryEmail = emailRes.data.find(email => email.primary && email.verified);
-
-    // Return complete user object + verified email
+app.get('/api/github/user', (req, res) => {
+  if (req.isAuthenticated()) {
+    const { username, displayName, photos, profileUrl, _json } = req.user;
     res.json({
-      user_data: {
-        ...userData,
-        email: primaryEmail?.email || userData.email || null
-      }
+      username,
+      displayName,
+      avatar: photos?.[0]?.value,
+      profileUrl,
+      email: _json?.email,
     });
-
-  } catch (error) {
-    console.error('GitHub user fetch error:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch user data' });
+  } else {
+    res.status(401).json({ error: 'User not authenticated' });
   }
 });
+
+
+
+// app.get('/api/github/user', async (req, res) => {
+//   const token = req.headers.authorization?.split(' ')[1];
+
+//   if (!token) {
+//     return res.status(401).json({ error: 'Access token missing' });
+//   }
+
+//   try {
+//     // Fetch full user profile
+//     const userRes = await axios.get('https://api.github.com/user', {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//         Accept: 'application/vnd.github+json',
+//         'User-Agent': 'YourAppName'
+//       }
+//     });
+
+//     const userData = userRes.data;
+
+//     // Fetch email separately (if email is private)
+//     const emailRes = await axios.get('https://api.github.com/user/emails', {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//         Accept: 'application/vnd.github+json',
+//         'User-Agent': 'YourAppName'
+//       }
+//     });
+
+//     const primaryEmail = emailRes.data.find(email => email.primary && email.verified);
+
+//     // Return complete user object + verified email
+//     res.json({
+//       user_data: {
+//         ...userData,
+//         email: primaryEmail?.email || userData.email || null
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error('GitHub user fetch error:', error.response?.data || error.message);
+//     res.status(500).json({ error: 'Failed to fetch user data' });
+//   }
+// });
 
 
 // const axios = require('axios');
