@@ -16,7 +16,24 @@ const app = express();
 // app.use(passport.session());
 
 // Middleware first:
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+
+
+// app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000','http://localhost:5174','http://localhost:5001'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed from this origin'));
+    }
+  },
+  credentials: true
+}));
+
+
 app.use(session({ secret: 'github-oauth', resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -28,7 +45,7 @@ app.use('/api/github', githubRoutes);
 passport.use(new GitHubStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: "http://localhost:5001/auth/github/callback"
+    callbackURL: "https://github-sso.onrender.com/auth/github/callback"
   },
   (accessToken, refreshToken, profile, done) => {
     profile.token = accessToken;
@@ -97,7 +114,7 @@ app.get('/auth/github/callback',
   passport.authenticate('github', { failureRedirect: '/' }),
   (req, res) => {
     req.session.token = req.user.token; // Save access token in session
-    res.redirect(`http://localhost:5174/?token=${req.user.token}`);
+    res.redirect(`http://localhost:5173/?token=${req.user.token}`);
   }
 );
 
