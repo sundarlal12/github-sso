@@ -97,7 +97,7 @@ app.get('/auth/github/callback',
   passport.authenticate('github', { failureRedirect: '/' }),
   (req, res) => {
     req.session.token = req.user.token; // Save access token in session
-    res.redirect(`http://localhost:3000/?token=${req.user.token}`);
+    res.redirect(`http://localhost:5174/?token=${req.user.token}`);
   }
 );
 

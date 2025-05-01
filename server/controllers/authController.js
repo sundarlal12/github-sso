@@ -20,7 +20,7 @@ exports.githubCallback = async (req, res) => {
 
     const access_token = response.data.access_token;
     // You can save this in a DB/session/cookie as needed
-    res.redirect(`http://localhost:3000/dashboard?token=${access_token}`);
+    res.redirect(`http://localhost:5174/dashboard?token=${access_token}`);
   } catch (error) {
     res.status(500).json({ error: 'Token exchange failed' });
   }
