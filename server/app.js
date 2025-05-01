@@ -34,7 +34,19 @@ app.use(cors({
 }));
 
 
-app.use(session({ secret: 'github-oauth', resave: false, saveUninitialized: true }));
+// app.use(session({ secret: 'github-oauth', resave: false, saveUninitialized: true }));
+
+app.set('trust proxy', 1); // Trust Render's proxy
+app.use(session({
+  secret: 'github-oauth',
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    secure: true,       // Only send cookie over HTTPS
+    sameSite: 'none'    // Allow cross-site cookies (needed for OAuth redirect)
+  }
+}));
+
 
 // app.use(session({
 //   secret: 'github-oauth',
