@@ -1,0 +1,100 @@
+/* Reset some default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100%;
+  background-color: #f7f9fc;
+}
+
+.login-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* LEFT PANEL */
+.login-left {
+  flex: 1;
+  background-color: #0f172a;
+  color: white;
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-left h2 {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  color: #38bdf8;
+}
+
+.login-left p {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 40px;
+  max-width: 500px;
+}
+
+.testimonial {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.testimonial img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.testimonial p {
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+/* RIGHT PANEL */
+.login-right {
+  flex: 1;
+  background-color: white;
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-right h3 {
+  font-size: 28px;
+  margin-bottom: 30px;
+}
+
+.oauth-btn {
+  background-color: #111827;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+  max-width: 300px;
+  text-align: left;
+}
+
+.oauth-btn:hover {
+  background-color: #1f2937;
+}
+
+.privacy-text {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 20px;
+}
