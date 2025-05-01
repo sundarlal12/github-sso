@@ -133,102 +133,148 @@ console.log(token);
 // });
 
 
-const axios = require('axios');
 
 app.get('/api/github/user', async (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: 'User not authenticated' });
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token missing' });
   }
 
-  const accessToken = req.user.token;
-
   try {
-    // 1. Get full user data
-    const userResponse = await axios.get('https://api.github.com/user', {
+    // Fetch full user profile
+    const userRes = await axios.get('https://api.github.com/user', {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'User-Agent': 'YourAppName',
+        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
+        'User-Agent': 'YourAppName'
       }
     });
 
-    const user = userResponse.data;
+    const userData = userRes.data;
 
-    // 2. Get primary email
-    const emailResponse = await axios.get('https://api.github.com/user/emails', {
+    // Fetch email separately (if email is private)
+    const emailRes = await axios.get('https://api.github.com/user/emails', {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'User-Agent': 'YourAppName',
+        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
+        'User-Agent': 'YourAppName'
       }
     });
 
-    const primaryEmailObj = emailResponse.data.find(email => email.primary && email.verified);
-    const primaryEmail = primaryEmailObj ? primaryEmailObj.email : null;
+    const primaryEmail = emailRes.data.find(email => email.primary && email.verified);
 
-    // 3. Get organizations
-    const orgsResponse = await axios.get('https://api.github.com/user/orgs', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'User-Agent': 'YourAppName',
-        Accept: 'application/vnd.github+json',
-      }
-    });
-
+    // Return complete user object + verified email
     res.json({
       user_data: {
-        login: user.login,
-        id: user.id,
-        node_id: user.node_id,
-        avatar_url: user.avatar_url,
-        gravatar_id: user.gravatar_id,
-        url: user.url,
-        html_url: user.html_url,
-        followers_url: user.followers_url,
-        following_url: user.following_url,
-        gists_url: user.gists_url,
-        starred_url: user.starred_url,
-        subscriptions_url: user.subscriptions_url,
-        organizations_url: user.organizations_url,
-        repos_url: user.repos_url,
-        events_url: user.events_url,
-        received_events_url: user.received_events_url,
-        type: user.type,
-        user_view_type: "private", // manually added
-        site_admin: user.site_admin,
-        name: user.name,
-        company: user.company,
-        blog: user.blog,
-        location: user.location,
-        email: user.email, // might still be null
-        hireable: user.hireable,
-        bio: user.bio,
-        twitter_username: user.twitter_username,
-        notification_email: null, // not provided by GitHub API
-        public_repos: user.public_repos,
-        public_gists: user.public_gists,
-        followers: user.followers,
-        following: user.following,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        private_gists: user.private_gists,
-        total_private_repos: user.total_private_repos,
-        owned_private_repos: user.owned_private_repos,
-        disk_usage: user.disk_usage,
-        collaborators: user.collaborators,
-        two_factor_authentication: user.two_factor_authentication,
-        plan: user.plan
-      },
-      orgs: orgsResponse.data,
-      collaborator_orgs: [], // add logic here if needed
-      email: primaryEmail
+        ...userData,
+        email: primaryEmail?.email || userData.email || null
+      }
     });
 
   } catch (error) {
-    console.error('GitHub API error:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch full GitHub user data' });
+    console.error('GitHub user fetch error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch user data' });
   }
 });
+
+
+// const axios = require('axios');
+
+// app.get('/api/github/user', async (req, res) => {
+//   if (!req.isAuthenticated()) {
+//     return res.status(401).json({ error: 'User not authenticated' });
+//   }
+
+//   const accessToken = req.user.token;
+
+//   try {
+//     // 1. Get full user data
+//     const userResponse = await axios.get('https://api.github.com/user', {
+//       headers: {
+//         Authorization: `Bearer ${accessToken}`,
+//         'User-Agent': 'YourAppName',
+//         Accept: 'application/vnd.github+json',
+//       }
+//     });
+
+//     const user = userResponse.data;
+
+//     // 2. Get primary email
+//     const emailResponse = await axios.get('https://api.github.com/user/emails', {
+//       headers: {
+//         Authorization: `Bearer ${accessToken}`,
+//         'User-Agent': 'YourAppName',
+//         Accept: 'application/vnd.github+json',
+//       }
+//     });
+
+//     const primaryEmailObj = emailResponse.data.find(email => email.primary && email.verified);
+//     const primaryEmail = primaryEmailObj ? primaryEmailObj.email : null;
+
+//     // 3. Get organizations
+//     const orgsResponse = await axios.get('https://api.github.com/user/orgs', {
+//       headers: {
+//         Authorization: `Bearer ${accessToken}`,
+//         'User-Agent': 'YourAppName',
+//         Accept: 'application/vnd.github+json',
+//       }
+//     });
+
+//     res.json({
+//       user_data: {
+//         login: user.login,
+//         id: user.id,
+//         node_id: user.node_id,
+//         avatar_url: user.avatar_url,
+//         gravatar_id: user.gravatar_id,
+//         url: user.url,
+//         html_url: user.html_url,
+//         followers_url: user.followers_url,
+//         following_url: user.following_url,
+//         gists_url: user.gists_url,
+//         starred_url: user.starred_url,
+//         subscriptions_url: user.subscriptions_url,
+//         organizations_url: user.organizations_url,
+//         repos_url: user.repos_url,
+//         events_url: user.events_url,
+//         received_events_url: user.received_events_url,
+//         type: user.type,
+//         user_view_type: "private", // manually added
+//         site_admin: user.site_admin,
+//         name: user.name,
+//         company: user.company,
+//         blog: user.blog,
+//         location: user.location,
+//         email: user.email, // might still be null
+//         hireable: user.hireable,
+//         bio: user.bio,
+//         twitter_username: user.twitter_username,
+//         notification_email: null, // not provided by GitHub API
+//         public_repos: user.public_repos,
+//         public_gists: user.public_gists,
+//         followers: user.followers,
+//         following: user.following,
+//         created_at: user.created_at,
+//         updated_at: user.updated_at,
+//         private_gists: user.private_gists,
+//         total_private_repos: user.total_private_repos,
+//         owned_private_repos: user.owned_private_repos,
+//         disk_usage: user.disk_usage,
+//         collaborators: user.collaborators,
+//         two_factor_authentication: user.two_factor_authentication,
+//         plan: user.plan
+//       },
+//       orgs: orgsResponse.data,
+//       collaborator_orgs: [], // add logic here if needed
+//       email: primaryEmail
+//     });
+
+//   } catch (error) {
+//     console.error('GitHub API error:', error.response?.data || error.message);
+//     res.status(500).json({ error: 'Failed to fetch full GitHub user data' });
+//   }
+// });
 
 
 
