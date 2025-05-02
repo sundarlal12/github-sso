@@ -126,12 +126,14 @@ console.log(token);
 app.get('/api/github/user', (req, res) => {
   if (req.isAuthenticated()) {
 
-    const { username, displayName, photos, profileUrl, _json } = req.user;
+    const { username, displayName, photos, profileUrl,public_repos, _json } = req.user;
+    console.log(req.user);
     res.json({
       username,
       displayName,
       avatar: photos?.[0]?.value,
       profileUrl,
+      public_repos,
       email: _json?.email,
     });
   } else {
