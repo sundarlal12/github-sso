@@ -70,88 +70,88 @@ const getHeaders = (token) => ({
 // });
 
 
-router.get('/api/user', ensureAuthenticated, async (req, res) => {
-  console.log("Hit /api/user route");
+//  router.get('/api/user', ensureAuthenticated, async (req, res) => {
+//   console.log("Hit /api/user route");
 
-  try {
-    const headers = getHeaders(req.session.token);
+//   try {
+//     const headers = getHeaders(req.session.token);
 
-    // 1. Get full user profile (includes plan, repo stats, etc.)
-    const userResponse = await axios.get('https://api.github.com/user', {
-      headers
-    });
+//     // 1. Get full user profile (includes plan, repo stats, etc.)
+//     const userResponse = await axios.get('https://api.github.com/user', {
+//       headers
+//     });
 
-    const userData = userResponse.data;
+//     const userData = userResponse.data;
 
-    // 2. Get primary email
-    const emailResponse = await axios.get('https://api.github.com/user/emails', {
-      headers
-    });
-    const primaryEmailObj = emailResponse.data.find(email => email.primary && email.verified);
-    const primaryEmail = primaryEmailObj ? primaryEmailObj.email : null;
+//     // 2. Get primary email
+//     const emailResponse = await axios.get('https://api.github.com/user/emails', {
+//       headers
+//     });
+//     const primaryEmailObj = emailResponse.data.find(email => email.primary && email.verified);
+//     const primaryEmail = primaryEmailObj ? primaryEmailObj.email : null;
 
-    // 3. Get organizations
-    const orgsResponse = await axios.get('https://api.github.com/user/orgs', {
-      headers
-    });
+//     // 3. Get organizations
+//     const orgsResponse = await axios.get('https://api.github.com/user/orgs', {
+//       headers
+//     });
 
-    // ✅ Build final response structure
-    const responsePayload = {
-      user_data: {
-        login: userData.login,
-        id: userData.id,
-        node_id: userData.node_id,
-        avatar_url: userData.avatar_url,
-        gravatar_id: userData.gravatar_id,
-        url: userData.url,
-        html_url: userData.html_url,
-        followers_url: userData.followers_url,
-        following_url: userData.following_url,
-        gists_url: userData.gists_url,
-        starred_url: userData.starred_url,
-        subscriptions_url: userData.subscriptions_url,
-        organizations_url: userData.organizations_url,
-        repos_url: userData.repos_url,
-        events_url: userData.events_url,
-        received_events_url: userData.received_events_url,
-        type: userData.type,
-        user_view_type: "private", // custom, GitHub doesn't provide this
-        site_admin: userData.site_admin,
-        name: userData.name,
-        company: userData.company,
-        blog: userData.blog,
-        location: userData.location,
-        email: userData.email, // GitHub may return null here if private
-        hireable: userData.hireable,
-        bio: userData.bio,
-        twitter_username: userData.twitter_username,
-        notification_email: null, // Not available from GitHub API directly
-        public_repos: userData.public_repos,
-        public_gists: userData.public_gists,
-        followers: userData.followers,
-        following: userData.following,
-        created_at: userData.created_at,
-        updated_at: userData.updated_at,
-        private_gists: userData.private_gists,
-        total_private_repos: userData.total_private_repos,
-        owned_private_repos: userData.owned_private_repos,
-        disk_usage: userData.disk_usage,
-        collaborators: userData.collaborators,
-        two_factor_authentication: userData.two_factor_authentication,
-        plan: userData.plan
-      },
-      orgs: orgsResponse.data,
-      collaborator_orgs: [], // optional, for advanced use
-      email: primaryEmail
-    };
+//     // ✅ Build final response structure
+//     const responsePayload = {
+//       user_data: {
+//         login: userData.login,
+//         id: userData.id,
+//         node_id: userData.node_id,
+//         avatar_url: userData.avatar_url,
+//         gravatar_id: userData.gravatar_id,
+//         url: userData.url,
+//         html_url: userData.html_url,
+//         followers_url: userData.followers_url,
+//         following_url: userData.following_url,
+//         gists_url: userData.gists_url,
+//         starred_url: userData.starred_url,
+//         subscriptions_url: userData.subscriptions_url,
+//         organizations_url: userData.organizations_url,
+//         repos_url: userData.repos_url,
+//         events_url: userData.events_url,
+//         received_events_url: userData.received_events_url,
+//         type: userData.type,
+//         user_view_type: "private", // custom, GitHub doesn't provide this
+//         site_admin: userData.site_admin,
+//         name: userData.name,
+//         company: userData.company,
+//         blog: userData.blog,
+//         location: userData.location,
+//         email: userData.email, // GitHub may return null here if private
+//         hireable: userData.hireable,
+//         bio: userData.bio,
+//         twitter_username: userData.twitter_username,
+//         notification_email: null, // Not available from GitHub API directly
+//         public_repos: userData.public_repos,
+//         public_gists: userData.public_gists,
+//         followers: userData.followers,
+//         following: userData.following,
+//         created_at: userData.created_at,
+//         updated_at: userData.updated_at,
+//         private_gists: userData.private_gists,
+//         total_private_repos: userData.total_private_repos,
+//         owned_private_repos: userData.owned_private_repos,
+//         disk_usage: userData.disk_usage,
+//         collaborators: userData.collaborators,
+//         two_factor_authentication: userData.two_factor_authentication,
+//         plan: userData.plan
+//       },
+//       orgs: orgsResponse.data,
+//       collaborator_orgs: [], // optional, for advanced use
+//       email: primaryEmail
+//     };
 
-    res.json(responsePayload);
+//     res.json(responsePayload);
 
-  } catch (error) {
-    console.error("GitHub API error:", error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to fetch user data' });
-  }
-});
+//   } catch (error) {
+//     console.error("GitHub API error:", error.response?.data || error.message);
+//     res.status(500).json({ error: 'Failed to fetch user data' });
+//   }
+// });
 
 
 

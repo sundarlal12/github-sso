@@ -131,9 +131,7 @@ app.get('/api/github/user', (req, res) => {
     res.json({
       username,
       displayName,
-      avatar: photos?.[0]?.value,
-      profileUrl,
-      public_repos,
+     
       email: _json?.email,
     });
   } else {
