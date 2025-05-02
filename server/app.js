@@ -127,13 +127,15 @@ app.get('/api/github/user', (req, res) => {
   if (req.isAuthenticated()) {
 
     const { username, displayName, photos, profileUrl,public_repos, _json } = req.user;
-    console.log(req.user);
-    res.json({
-      username,
-      displayName,
+    res.json(req.user);
+
+
+    // res.json({
+    //   username,
+    //   displayName,
      
-      email: _json?.email,
-    });
+    //   email: _json?.email,
+    // });
   } else {
     res.status(401).json({ error: 'User not authenticated' });
   }
