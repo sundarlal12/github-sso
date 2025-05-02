@@ -95,6 +95,7 @@ app.get('/auth/github', passport.authenticate('github', { scope: ['repo', 'read:
 // );
 
 
+
 // app.get('/api/github/repos', async (req, res) => {
 
 //   const token = req.headers.authorization?.split(' ')[1]; // Expecting Bearer token
@@ -125,36 +126,35 @@ app.get('/auth/github', passport.authenticate('github', { scope: ['repo', 'read:
 
 
 
+app.get('/api/github/repos', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
 
+  if (!token) {
+    return res.status(401).json({ error: 'Access token missing' });
+  }
 
+  try {
+    const response = await axios.get('https://api.github.com/user/repos', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'my-github-app'
+      }
+    });
 
-app.get('/api/github/repos', (req, res) => {
-
-  // const token = req.headers.authorization?.split(' ')[1]; // Expecting Bearer token
-  // console.log(token);
-  
-  //   if (!token) {
-  //     return res.status(401).json({ error: 'Access token missing' });
-  //   }
-
-  if (req.isAuthenticated()) {
-
-    // const {
-    //   id,
-    //   nodeId,
-    //   displayName,
-    //   username,
-    //   profileUrl,
-    //   _json
-    // } = req.user;
-
-    // const data = _json;
-    res.json(req.user);
-
-  } else {
-    res.status(401).json({ error: 'User not authenticated' });
+    res.json(response.data);
+  } catch (error) {
+    console.error('GitHub API error:', error.response?.status, error.response?.data);
+    res.status(500).json({
+      error: 'Failed to fetch repositories',
+      status: error.response?.status,
+      details: error.response?.data || error.message
+    });
   }
 });
+
+
+
 
 
 
