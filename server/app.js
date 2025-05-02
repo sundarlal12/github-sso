@@ -123,24 +123,47 @@ console.log(token);
 
 
 
+// app.get('/api/github/user', (req, res) => {
+//   if (req.isAuthenticated()) {
+
+//     const { username, displayName, photos, profileUrl,public_repos, _json } = req.user;
+//     res.json(req.user);
+
+
+//     // res.json({
+//     //   username,
+//     //   displayName,
+     
+//     //   email: _json?.email,
+//     // });
+//   } else {
+//     res.status(401).json({ error: 'User not authenticated' });
+//   }
+// });
+
 app.get('/api/github/user', (req, res) => {
   if (req.isAuthenticated()) {
+    const {
+      id,
+      nodeId,
+      displayName,
+      username,
+      profileUrl,
+      _json
+    } = req.user;
 
-    const { username, displayName, photos, profileUrl,public_repos, _json } = req.user;
-    res.json(req.user);
-
-
-    // res.json({
-    //   username,
-    //   displayName,
-     
-    //   email: _json?.email,
-    // });
+    res.json({
+      id,
+      nodeId,
+      displayName,
+      username,
+      profileUrl,
+      _json
+    });
   } else {
     res.status(401).json({ error: 'User not authenticated' });
   }
 });
-
 
 
 
