@@ -129,8 +129,38 @@ app.get('/auth/github', passport.authenticate('github', { scope: ['repo', 'read:
 
 
 
+// app.get('/api/github/repos', async (req, res) => {
+//   const token = req.headers.authorization?.split(' ')[1];
+
+//   if (!token) {
+//     return res.status(401).json({ error: 'Access token missing' });
+//   }
+
+//   try {
+//     const response = await axios.get('https://api.github.com/user/repos', {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//         Accept: 'application/vnd.github+json',
+//         'User-Agent': 'my-github-app'
+//       }
+//     });
+
+//     res.json(response.data);
+//   } catch (error) {
+//     console.error('GitHub API error:', error.response?.status, error.response?.data);
+//     res.status(500).json({
+//       error: 'Failed to fetch repositories',
+//       status: error.response?.status,
+//       details: error.response?.data || error.message
+//     });
+//   }
+// });
+
+
+
+
 app.get('/api/github/repos', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = req.headers.authorization?.split(' ')[1]; // Bearer token
 
   if (!token) {
     return res.status(401).json({ error: 'Access token missing' });
@@ -140,22 +170,54 @@ app.get('/api/github/repos', async (req, res) => {
     const response = await axios.get('https://api.github.com/user/repos', {
       headers: {
         Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'my-github-app'
+        Accept: 'application/vnd.github+json'
       }
     });
 
-    res.json(response.data);
+    const filteredRepos = response.data.map(repo => ({
+      id: repo.id,
+      node_id: repo.node_id,
+      name: repo.name,
+      full_name: repo.full_name,
+      private: repo.private,
+      owner: {
+        login: repo.owner.login,
+        id: repo.owner.id,
+        node_id: repo.owner.node_id,
+        type: repo.owner.type,
+        user_view_type: repo.owner.user_view_type,
+        site_admin: repo.owner.site_admin
+      },
+      html_url: repo.html_url,
+      description: repo.description,
+      fork: repo.fork,
+      url: repo.url,
+      created_at: repo.created_at,
+      updated_at: repo.updated_at,
+      pushed_at: repo.pushed_at,
+      clone_url: repo.clone_url,
+      svn_url: repo.svn_url,
+      size: repo.size,
+      stargazers_count: repo.stargazers_count,
+      watchers_count: repo.watchers_count,
+      language: repo.language,
+      disabled: repo.disabled,
+      open_issues_count: repo.open_issues_count,
+      visibility: repo.visibility,
+      default_branch: repo.default_branch,
+      permissions: repo.permissions
+    }));
+
+    res.json(filteredRepos);
+
   } catch (error) {
     console.error('GitHub API error:', error.response?.status, error.response?.data);
     res.status(500).json({
       error: 'Failed to fetch repositories',
-      status: error.response?.status,
       details: error.response?.data || error.message
     });
   }
 });
-
 
 
 
