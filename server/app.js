@@ -1,5 +1,6 @@
 // server.js
 const express = require('express');
+import axios from 'axios';
 const session = require('express-session');
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
@@ -7,6 +8,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const axios = require('axios');
+
 // const githubRoutes = require('./routes/githubRoutes');
 // app.use('/api/github', githubRoutes);
 
