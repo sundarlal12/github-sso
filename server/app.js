@@ -141,7 +141,8 @@ console.log(token);
 //   }
 // });
 
-app.get('/api/github/user', (req, res) => {
+
+ app.get('/api/github/user', (req, res) => {
   if (req.isAuthenticated()) {
     const {
       id,
@@ -152,13 +153,14 @@ app.get('/api/github/user', (req, res) => {
       _json
     } = req.user;
 
+    const data = _json;
     res.json({
       id,
       nodeId,
       displayName,
       username,
       profileUrl,
-      _json
+      data
     });
   } else {
     res.status(401).json({ error: 'User not authenticated' });
