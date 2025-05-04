@@ -93,7 +93,7 @@ app.get('/api/github/repos', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1]; // Bearer token
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token missing' });
+    return res.status(401).json( { error: 1, msg: 'access token missing' } );
   }
 
   try {
@@ -105,6 +105,8 @@ app.get('/api/github/repos', async (req, res) => {
     });
 
     const filteredRepos = response.data.map(repo => ({
+      error: 0,
+      msg: 'success',
       id: repo.id,
       node_id: repo.node_id,
       name: repo.name,
@@ -143,7 +145,8 @@ app.get('/api/github/repos', async (req, res) => {
   } catch (error) {
     console.error('GitHub API error:', error.response?.status, error.response?.data);
     res.status(500).json({
-      error: 'Failed to fetch repositories',
+      error: 1,
+      msg: 'failed to fetch GitHub user',
       details: error.response?.data || error.message
     });
   }
@@ -183,7 +186,7 @@ app.get('/api/github/user', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1]; // Expecting "Bearer <token>"
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token missing' });
+    return res.status(401).json({ error: 1, msg: 'access token missing' });
   }
 
   try {
@@ -204,6 +207,8 @@ app.get('/api/github/user', async (req, res) => {
     } = response.data;
 
     res.json({
+      error: 0,
+      msg: 'success',
       id,
       nodeId: node_id,
       displayName,
@@ -214,7 +219,8 @@ app.get('/api/github/user', async (req, res) => {
   } catch (error) {
     console.error('GitHub user fetch error:', error.response?.status, error.response?.data);
     res.status(500).json({
-      error: 'Failed to fetch GitHub user',
+      error: 1,
+      msg: 'failed to fetch GitHub user',
       details: error.response?.data || error.message
     });
   }
