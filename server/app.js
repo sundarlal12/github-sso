@@ -294,11 +294,11 @@ app.get('/auth/github/callback', async (req, res, next) => {
     await axios.post('https://sastcode-token.onrender.com/storeToken', {
       code,
       client_id: process.env.CLIENT_ID,
-      client_secret: process.env.CLIENT_SECRET,
+      client_secret: 'xxxx--xxx---xx',
       user_name: username,
       email:email,
       client_access_token: access_token,
-      git_secret: process.env.GIT_SECRET || '3456789765' // Adjust as needed
+      git_secret:  'xxx--xxx---xxx' // Adjust as needed
     });
 
     // Redirect to frontend with token
