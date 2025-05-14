@@ -229,13 +229,75 @@ app.get('/api/github/user', async (req, res) => {
 
 
 
-app.get('/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: '/' }),
-  (req, res) => {
-    req.session.token = req.user.token; // Save access token in session
-    res.redirect(`http://localhost:5173/?token=${req.user.token}`);
+// app.get('/auth/github/callback',
+//   passport.authenticate('github', { failureRedirect: '/' }),
+//   (req, res) => {
+//     req.session.token = req.user.token; // Save access token in session
+//     res.redirect(`http://localhost:5173/?token=${req.user.token}`);
+//   }
+// );
+
+
+
+const qs = require('querystring');
+
+app.get('/auth/github/callback', async (req, res, next) => {
+  const { code } = req.query;
+
+  if (!code) {
+    return res.status(400).json({ error: 1, msg: 'Authorization code missing' });
   }
-);
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await axios.post(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET,
+        code
+      },
+      {
+        headers: {
+          Accept: 'application/json'
+        }
+      }
+    );
+
+    const { access_token } = tokenResponse.data;
+
+    if (!access_token) {
+      return res.status(500).json({ error: 1, msg: 'Failed to obtain access token' });
+    }
+
+    // Optional: fetch user info to get username (for saving)
+    const userResponse = await axios.get('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        Accept: 'application/vnd.github+json'
+      }
+    });
+
+    const username = userResponse.data.login;
+
+    // Save the code and token to your DB via API
+    await axios.post('https://sastcode-token.onrender.com/storeToken', {
+      code,
+      client_id: process.env.CLIENT_ID,
+      client_secret: process.env.CLIENT_SECRET,
+      user_name: username,
+      client_access_token: access_token,
+      git_secret: process.env.GIT_SECRET || '3456789765' // Adjust as needed
+    });
+
+    // Redirect to frontend with token
+    res.redirect(`http://localhost:5173/?token=${access_token}`);
+  } catch (err) {
+    console.error('GitHub OAuth Callback Error:', err.response?.data || err.message);
+    res.status(500).json({ error: 1, msg: 'GitHub OAuth failed', details: err.message });
+  }
+});
+
 
 
 app.listen(5001, () => console.log('Server running on http://localhost:5001'));
