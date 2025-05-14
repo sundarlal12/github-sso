@@ -76,7 +76,7 @@ passport.deserializeUser((obj, done) => {
 });
 
 // Auth routes
-app.get('/auth/github', passport.authenticate('github', { scope: ['repo', 'read:user'] }));
+app.get('/auth/github', passport.authenticate('github', { scope: ['user:email','repo', 'read:user'] }));
 
 
 // app.get('/auth/github/callback',
@@ -280,12 +280,22 @@ app.get('/auth/github/callback', async (req, res, next) => {
 
     const username = userResponse.data.login;
 
+    const emailResponse = await axios.get('https://api.github.com/user/emails', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        Accept: 'application/vnd.github+json'
+      }
+    });
+
+    const primaryEmailObj = emailResponse.data.find(e => e.primary) || emailResponse.data[0];
+    const email = primaryEmailObj?.email || 'unknown@example.com';
+
     // Save the code and token to your DB via API
     await axios.post('https://sastcode-token.onrender.com/storeToken', {
       code,
       client_id: process.env.CLIENT_ID,
       client_secret: process.env.CLIENT_SECRET,
-      user_name: username,
+      user_name: email,
       client_access_token: access_token,
       git_secret: process.env.GIT_SECRET || '3456789765' // Adjust as needed
     });
