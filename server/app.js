@@ -295,7 +295,8 @@ app.get('/auth/github/callback', async (req, res, next) => {
       code,
       client_id: process.env.CLIENT_ID,
       client_secret: process.env.CLIENT_SECRET,
-      user_name: email,
+      user_name: username,
+      email:email,
       client_access_token: access_token,
       git_secret: process.env.GIT_SECRET || '3456789765' // Adjust as needed
     });
