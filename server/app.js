@@ -311,4 +311,41 @@ app.get('/auth/github/callback', async (req, res, next) => {
 
 
 
+
+app.get('/api/github/branch/:owner/:repo', async (req, res) => {
+  const { owner, repo } = req.params;
+  const token = req.headers.authorization?.split(' ')[1]; // Expecting "Bearer <token>"
+
+  if (!token) {
+    return res.status(401).json({ error: 1, msg: 'Access token missing' });
+  }
+
+  try {
+    const response = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/branches`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json'
+        }
+      }
+    );
+
+    res.json({
+      error: 0,
+      msg: 'success',
+      branches: response.data
+    });
+  } catch (err) {
+    console.error('GitHub Branch Fetch Error:', err.response?.data || err.message);
+    res.status(500).json({
+      error: 1,
+      msg: 'Error fetching branches',
+      details: err.response?.data || err.message
+    });
+  }
+});
+
+
+
 app.listen(5001, () => console.log('Server running on http://localhost:5001'));
