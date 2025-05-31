@@ -331,10 +331,12 @@ app.get('/api/github/branch/:owner/:repo', async (req, res) => {
       }
     );
 
+   const branchNames = response.data.map(branch => branch.name);
+
     res.json({
       error: 0,
       msg: 'success',
-      branches: response.data
+      branches: branchNames
     });
   } catch (err) {
     console.error('GitHub Branch Fetch Error:', err.response?.data || err.message);
