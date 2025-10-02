@@ -510,7 +510,7 @@ app.get('/api/gitlab/user', async (req, res) => {
 
 
 // GET projects (membership)
-app.get('/api/gitlab/projects', async (req, res) => {
+app.get('/api/gitlab/repos', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1] || req.session.gitlabToken;
   if (!token) return res.status(401).json({ error: 1, msg: 'GitLab access token missing' });
 
