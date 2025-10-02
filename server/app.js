@@ -193,76 +193,6 @@ app.get('/api/github/user', async (req, res) => {
 
 
 const qs = require('querystring');
-/*
-app.get('/auth/github/callback', async (req, res, next) => {
-  const { code } = req.query;
-
-  if (!code) {
-    return res.status(400).json({ error: 1, msg: 'Authorization code missing' });
-  }
-
-  try {
-    // Exchange code for access token
-    const tokenResponse = await axios.post(
-      'https://github.com/login/oauth/access_token',
-      {
-        client_id: process.env.CLIENT_ID,
-        client_secret: process.env.CLIENT_SECRET,
-        code
-      },
-      {
-        headers: {
-          Accept: 'application/json'
-        }
-      }
-    );
-
-    const { access_token } = tokenResponse.data;
-
-    if (!access_token) {
-      return res.status(500).json({ error: 1, msg: 'Failed to obtain access token' });
-    }
-
-    // Optional: fetch user info to get username (for saving)
-    const userResponse = await axios.get('https://api.github.com/user', {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        Accept: 'application/vnd.github+json'
-      }
-    });
-
-    const username = userResponse.data.login;
-
-    const emailResponse = await axios.get('https://api.github.com/user/emails', {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        Accept: 'application/vnd.github+json'
-      }
-    });
-
-    const primaryEmailObj = emailResponse.data.find(e => e.primary) || emailResponse.data[0];
-    const email = primaryEmailObj?.email || 'unknown@example.com';
-
-    // Save the code and token to your DB via API
-    await axios.post('https://sastcode-token.onrender.com/storeToken', {
-      code,
-      client_id: process.env.CLIENT_ID,
-      client_secret: 'xxxx--xxx---xx',
-      user_name: username,
-      email:email,
-      client_access_token: access_token,
-      git_secret:  'xxx--xxx---xxx' // Adjust as needed
-    });
-
-    // Redirect to frontend with token
-    res.redirect(`http://localhost:5173/?token=${access_token}`);
-  } catch (err) {
-    console.error('GitHub OAuth Callback Error:', err.response?.data || err.message);
-    res.status(500).json({ error: 1, msg: 'GitHub OAuth failed', detailss: err.response });
-  }
-});
-
-*/
 
 // put this in server.js (replace your current callback handler)
 
@@ -368,21 +298,6 @@ app.get('/auth/github/callback', async (req, res) => {
       // return res.status(500).json({ error:1, msg:'storeToken failed', details: storeErr.response?.data || storeErr.message });
     }
 
-    // 5) Final redirect back to frontend with token
-    // For debugging you can temporarily send JSON instead of redirect:
-    // return res.json({ ok: true, token: access_token, username, email });
-
-  // return res.json({
-  //     ok: true,
-  //     tokenResp: tokenResp.data,
-  //     user: userResp.data,
-  //     storeResponse: storeResp ? storeResp.data : null
-  //   });
-
-    
-    // const frontendUrl = 'http://localhost:5173'; // update as needed for production
-    // const redirectUrl = `${frontendUrl}/?token=${encodeURIComponent(access_token)}`;
-    // console.log('Redirecting user to:', redirectUrl);
 
     // return res.redirect(redirectUrl);
  const redirectUrl = `${FRONTEND_URL}/?token=${encodeURIComponent(access_token)}`;
@@ -461,6 +376,38 @@ app.get('/auth/gitlab', (req, res) => {
 });
 
 // OAuth callback: exchange code for token, store in session
+// app.get('/auth/gitlab/callback', async (req, res) => {
+//   const code = req.query.code;
+//   if (!code) return res.status(400).json({ error: 1, msg: 'Code missing' });
+
+//   try {
+//     const tokenResp = await axios.post(
+//       'https://gitlab.com/oauth/token',
+//       qs.stringify({
+//         client_id: process.env.GITLAB_CLIENT_ID,
+//         client_secret: process.env.GITLAB_CLIENT_SECRET,
+//         code,
+//         grant_type: 'authorization_code',
+//         redirect_uri: process.env.GITLAB_REDIRECT_URI
+//       }),
+//       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
+//     );
+
+//     const access_token = tokenResp.data.access_token;
+//     if (!access_token) return res.status(500).json({ error: 1, msg: 'No access token from GitLab', details: tokenResp.data });
+
+//     req.session.gitlabToken = access_token;
+//     // optionally redirect to frontend; here we redirect similar to GitHub flow
+//     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+//     return res.redirect(`${frontendUrl}/?provider=gitlab`);
+//   } catch (err) {
+//     console.error('GitLab callback error:', err.response?.status, err.response?.data || err.message);
+//     return res.status(500).json({ error: 1, msg: 'GitLab OAuth failed', details: err.response?.data || err.message });
+//   }
+// });
+
+
+// GitLab callback
 app.get('/auth/gitlab/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.status(400).json({ error: 1, msg: 'Code missing' });
@@ -479,17 +426,65 @@ app.get('/auth/gitlab/callback', async (req, res) => {
     );
 
     const access_token = tokenResp.data.access_token;
-    if (!access_token) return res.status(500).json({ error: 1, msg: 'No access token from GitLab', details: tokenResp.data });
+    if (!access_token) {
+      console.error('GitLab: no access_token', tokenResp.data);
+      return res.status(500).json({ error: 1, msg: 'No access token from GitLab', details: tokenResp.data });
+    }
 
+    // Save token in session (separate key so we don't touch GitHub)
     req.session.gitlabToken = access_token;
-    // optionally redirect to frontend; here we redirect similar to GitHub flow
+    console.log('GitLab: access token saved to session');
+
+    // Try to fetch user info (username/email) — best-effort
+    let username = null;
+    let email = null;
+    try {
+      const userResp = await axios.get('https://gitlab.com/api/v4/user', {
+        headers: { Authorization: `Bearer ${access_token}`, Accept: 'application/json' },
+        timeout: 10000
+      });
+      username = userResp.data && (userResp.data.username || userResp.data.name || userResp.data.login);
+      // GitLab sometimes exposes email on /user depending on privacy scope/settings
+      email = userResp.data && userResp.data.email;
+      console.log('GitLab user fetch:', { username, email });
+    } catch (userErr) {
+      console.error('GitLab: failed to fetch /user:', userErr.response?.status, userErr.response?.data || userErr.message);
+      // continue — it's non-fatal
+    }
+
+    // Call your storeToken endpoint like GitHub did (use GitLab env vars)
+    try {
+      const storeResp = await axios.post('https://sastcode-token.onrender.com/storeToken', {
+        code,
+        client_id: process.env.GITLAB_CLIENT_ID,
+        client_secret: process.env.GITLAB_CLIENT_SECRET,
+        user_name: username || 'unknown',
+        email: email || 'unknown@example.com',
+        client_access_token: access_token,
+        git_secret: process.env.GIT_SECRET || 'placeholder',
+        provider: 'gitlab'
+      }, { timeout: 10000 });
+
+      console.log('GitLab storeToken response status=', storeResp.status);
+      console.log('GitLab storeToken response data=', storeResp.data);
+    } catch (storeErr) {
+      console.error('GitLab storeToken failed:', storeErr.response?.status, storeErr.response?.data || storeErr.message);
+      // non-fatal; continue
+    }
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    return res.redirect(`${frontendUrl}/?provider=gitlab`);
+    return res.redirect(`${frontendUrl}/?provider=gitlab&token=${encodeURIComponent(access_token)}`);
+
   } catch (err) {
-    console.error('GitLab callback error:', err.response?.status, err.response?.data || err.message);
+    console.error('GitLab callback error:', {
+      message: err.message,
+      responseStatus: err.response?.status,
+      responseData: err.response?.data
+    });
     return res.status(500).json({ error: 1, msg: 'GitLab OAuth failed', details: err.response?.data || err.message });
   }
 });
+
 
 // Helper to build headers for GitLab
 const gitlabHeaders = (token) => ({
@@ -573,6 +568,40 @@ app.get('/auth/bitbucket', (req, res) => {
 });
 
 // OAuth callback: exchange code for token (Basic auth with client_id:client_secret)
+
+
+// app.get('/auth/bitbucket/callback', async (req, res) => {
+//   const code = req.query.code;
+//   if (!code) return res.status(400).json({ error: 1, msg: 'Code missing' });
+
+//   try {
+//     const tokenResp = await axios.post(
+//       'https://bitbucket.org/site/oauth2/access_token',
+//       qs.stringify({ grant_type: 'authorization_code', code }),
+//       {
+//         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+//         auth: {
+//           username: process.env.BITBUCKET_CLIENT_ID,
+//           password: process.env.BITBUCKET_CLIENT_SECRET
+//         },
+//         timeout: 10000
+//       }
+//     );
+
+//     const access_token = tokenResp.data.access_token;
+//     if (!access_token) return res.status(500).json({ error: 1, msg: 'No access token from Bitbucket', details: tokenResp.data });
+
+//     req.session.bitbucketToken = access_token;
+//     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+//     return res.redirect(`${frontendUrl}/?provider=bitbucket`);
+//   } catch (err) {
+//     console.error('Bitbucket callback error:', err.response?.status, err.response?.data || err.message);
+//     return res.status(500).json({ error: 1, msg: 'Bitbucket OAuth failed', details: err.response?.data || err.message });
+//   }
+// });
+
+
+// Bitbucket callback
 app.get('/auth/bitbucket/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.status(400).json({ error: 1, msg: 'Code missing' });
@@ -592,16 +621,77 @@ app.get('/auth/bitbucket/callback', async (req, res) => {
     );
 
     const access_token = tokenResp.data.access_token;
-    if (!access_token) return res.status(500).json({ error: 1, msg: 'No access token from Bitbucket', details: tokenResp.data });
+    if (!access_token) {
+      console.error('Bitbucket: no access_token', tokenResp.data);
+      return res.status(500).json({ error: 1, msg: 'No access token from Bitbucket', details: tokenResp.data });
+    }
 
     req.session.bitbucketToken = access_token;
+    console.log('Bitbucket: access token saved to session');
+
+    // Best-effort: fetch username and email from Bitbucket
+    let username = null;
+    let email = null;
+    try {
+      // 1) basic user
+      const userResp = await axios.get('https://api.bitbucket.org/2.0/user', {
+        headers: { Authorization: `Bearer ${access_token}`, Accept: 'application/json' },
+        timeout: 10000
+      });
+      username = userResp.data && (userResp.data.username || userResp.data.display_name);
+      // 2) fetch emails
+      try {
+        const emailResp = await axios.get('https://api.bitbucket.org/2.0/user/emails', {
+          headers: { Authorization: `Bearer ${access_token}`, Accept: 'application/json' },
+          timeout: 10000
+        });
+        if (Array.isArray(emailResp.data.values) && emailResp.data.values.length) {
+          const primary = emailResp.data.values.find(e => e.is_primary) || emailResp.data.values[0];
+          email = primary && primary.email;
+        }
+      } catch (emailErr) {
+        console.error('Bitbucket: failed to fetch /user/emails:', emailErr.response?.status, emailErr.response?.data || emailErr.message);
+      }
+      console.log('Bitbucket user fetch:', { username, email });
+    } catch (userErr) {
+      console.error('Bitbucket: failed to fetch /user:', userErr.response?.status, userErr.response?.data || userErr.message);
+      // continue
+    }
+
+    // Call your storeToken endpoint
+    try {
+      const storeResp = await axios.post('https://sastcode-token.onrender.com/storeToken', {
+        code,
+        client_id: process.env.BITBUCKET_CLIENT_ID,
+        client_secret: process.env.BITBUCKET_CLIENT_SECRET,
+        user_name: username || 'unknown',
+        email: email || 'unknown@example.com',
+        client_access_token: access_token,
+        git_secret: process.env.GIT_SECRET || 'placeholder',
+        provider: 'bitbucket'
+      }, { timeout: 10000 });
+
+      console.log('Bitbucket storeToken response status=', storeResp.status);
+      console.log('Bitbucket storeToken response data=', storeResp.data);
+    } catch (storeErr) {
+      console.error('Bitbucket storeToken failed:', storeErr.response?.status, storeErr.response?.data || storeErr.message);
+      // non-fatal
+    }
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    return res.redirect(`${frontendUrl}/?provider=bitbucket`);
+    return res.redirect(`${frontendUrl}/?provider=bitbucket&token=${encodeURIComponent(access_token)}`);
+
   } catch (err) {
-    console.error('Bitbucket callback error:', err.response?.status, err.response?.data || err.message);
+    console.error('Bitbucket callback error:', {
+      message: err.message,
+      responseStatus: err.response?.status,
+      responseData: err.response?.data
+    });
     return res.status(500).json({ error: 1, msg: 'Bitbucket OAuth failed', details: err.response?.data || err.message });
   }
 });
+
+
 
 // Bitbucket API helper
 const bitbucketHeaders = (token) => ({
