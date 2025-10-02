@@ -375,36 +375,10 @@ app.get('/auth/gitlab', (req, res) => {
   res.redirect(url);
 });
 
-// OAuth callback: exchange code for token, store in session
-// app.get('/auth/gitlab/callback', async (req, res) => {
-//   const code = req.query.code;
-//   if (!code) return res.status(400).json({ error: 1, msg: 'Code missing' });
 
-//   try {
-//     const tokenResp = await axios.post(
-//       'https://gitlab.com/oauth/token',
-//       qs.stringify({
-//         client_id: process.env.GITLAB_CLIENT_ID,
-//         client_secret: process.env.GITLAB_CLIENT_SECRET,
-//         code,
-//         grant_type: 'authorization_code',
-//         redirect_uri: process.env.GITLAB_REDIRECT_URI
-//       }),
-//       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
-//     );
 
-//     const access_token = tokenResp.data.access_token;
-//     if (!access_token) return res.status(500).json({ error: 1, msg: 'No access token from GitLab', details: tokenResp.data });
 
-//     req.session.gitlabToken = access_token;
-//     // optionally redirect to frontend; here we redirect similar to GitHub flow
-//     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-//     return res.redirect(`${frontendUrl}/?provider=gitlab`);
-//   } catch (err) {
-//     console.error('GitLab callback error:', err.response?.status, err.response?.data || err.message);
-//     return res.status(500).json({ error: 1, msg: 'GitLab OAuth failed', details: err.response?.data || err.message });
-//   }
-// });
+
 
 
 // GitLab callback
@@ -492,6 +466,49 @@ const gitlabHeaders = (token) => ({
   Accept: 'application/json'
 });
 
+
+
+
+app.get('/api/gitlab/user', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1] || req.session.gitlabToken;
+  if (!token) {
+    return res.status(401).json({ error: 1, msg: 'GitLab access token missing' });
+  }
+
+  try {
+    const response = await axios.get('https://gitlab.com/api/v4/user', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+
+    const user = response.data;
+    res.json({
+      error: 0,
+      msg: 'success',
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      avatar_url: user.avatar_url,
+      profileUrl: user.web_url,
+      data: user
+    });
+  } catch (err) {
+    console.error('GitLab user fetch error:', err.response?.status, err.response?.data || err.message);
+    res.status(500).json({
+      error: 1,
+      msg: 'Failed to fetch GitLab user',
+      details: err.response?.data || err.message
+    });
+  }
+});
+
+
+
+
+
 // GET projects (membership)
 app.get('/api/gitlab/projects', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1] || req.session.gitlabToken;
@@ -570,35 +587,6 @@ app.get('/auth/bitbucket', (req, res) => {
 // OAuth callback: exchange code for token (Basic auth with client_id:client_secret)
 
 
-// app.get('/auth/bitbucket/callback', async (req, res) => {
-//   const code = req.query.code;
-//   if (!code) return res.status(400).json({ error: 1, msg: 'Code missing' });
-
-//   try {
-//     const tokenResp = await axios.post(
-//       'https://bitbucket.org/site/oauth2/access_token',
-//       qs.stringify({ grant_type: 'authorization_code', code }),
-//       {
-//         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-//         auth: {
-//           username: process.env.BITBUCKET_CLIENT_ID,
-//           password: process.env.BITBUCKET_CLIENT_SECRET
-//         },
-//         timeout: 10000
-//       }
-//     );
-
-//     const access_token = tokenResp.data.access_token;
-//     if (!access_token) return res.status(500).json({ error: 1, msg: 'No access token from Bitbucket', details: tokenResp.data });
-
-//     req.session.bitbucketToken = access_token;
-//     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-//     return res.redirect(`${frontendUrl}/?provider=bitbucket`);
-//   } catch (err) {
-//     console.error('Bitbucket callback error:', err.response?.status, err.response?.data || err.message);
-//     return res.status(500).json({ error: 1, msg: 'Bitbucket OAuth failed', details: err.response?.data || err.message });
-//   }
-// });
 
 
 // Bitbucket callback
@@ -698,6 +686,68 @@ const bitbucketHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
   Accept: 'application/json'
 });
+
+
+
+
+
+app.get('/api/bitbucket/user', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1] || req.session.bitbucketToken;
+  if (!token) {
+    return res.status(401).json({ error: 1, msg: 'Bitbucket access token missing' });
+  }
+
+  try {
+    const response = await axios.get('https://api.bitbucket.org/2.0/user', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+
+    const user = response.data;
+
+    // Fetch email too (separate endpoint)
+    let email = null;
+    try {
+      const emailResp = await axios.get('https://api.bitbucket.org/2.0/user/emails', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+      });
+      if (Array.isArray(emailResp.data.values) && emailResp.data.values.length) {
+        const primary = emailResp.data.values.find(e => e.is_primary) || emailResp.data.values[0];
+        email = primary && primary.email;
+      }
+    } catch (emailErr) {
+      console.warn('Bitbucket email fetch failed', emailErr.response?.status);
+    }
+
+    res.json({
+      error: 0,
+      msg: 'success',
+      uuid: user.uuid,
+      username: user.username || user.nickname,
+      displayName: user.display_name,
+      account_id: user.account_id,
+      profileUrl: user.links?.html?.href,
+      avatar: user.links?.avatar?.href,
+      email: email,
+      data: user
+    });
+  } catch (err) {
+    console.error('Bitbucket user fetch error:', err.response?.status, err.response?.data || err.message);
+    res.status(500).json({
+      error: 1,
+      msg: 'Failed to fetch Bitbucket user',
+      details: err.response?.data || err.message
+    });
+  }
+});
+
+
+
+
+
+
 
 // List repos accessible to user (paginated)
 app.get('/api/bitbucket/repos', async (req, res) => {
