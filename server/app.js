@@ -583,7 +583,7 @@ app.get('/api/gitlab/content/:namespace/:repo/:branch/*', async (req, res) => {
 */
 
 // BRANCHES
-app.get('/api/gitlab/branches/:namespace/:repo', async (req, res) => {
+app.get('/api/gitlab/branch/:namespace/:repo', async (req, res) => {
   const { namespace, repo } = req.params;
   const token = req.headers.authorization?.split(' ')[1] || req.session.gitlabToken;
   if (!token) return res.status(401).json({ error: 1, msg: 'GitLab access token missing' });
@@ -881,7 +881,7 @@ app.get('/api/bitbucket/repos', async (req, res) => {
 
 
 // BRANCHES
-app.get('/api/bitbucket/branches/:workspace/:repo', async (req, res) => {
+app.get('/api/bitbucket/branch/:workspace/:repo', async (req, res) => {
   const { workspace, repo } = req.params;
   const token = req.headers.authorization?.split(' ')[1] || req.session.bitbucketToken;
   if (!token) return res.status(401).json({ error: 1, msg: 'Bitbucket access token missing' });
