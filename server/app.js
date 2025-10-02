@@ -523,6 +523,9 @@ app.get('/api/gitlab/repos', async (req, res) => {
   }
 });
 
+
+
+/*
 // GET branches for project identified by namespace/repo
 app.get('/api/gitlab/branches/:namespace/:repo', async (req, res) => {
   const { namespace, repo } = req.params;
@@ -575,6 +578,64 @@ app.get('/api/gitlab/content/:namespace/:repo/:branch/*', async (req, res) => {
     res.status(500).json({ error: 1, msg: 'Failed to fetch GitLab file content', details: err.response?.data || err.message });
   }
 });
+
+
+*/
+
+// BRANCHES
+app.get('/api/gitlab/branches/:namespace/:repo', async (req, res) => {
+  const { namespace, repo } = req.params;
+  const token = req.headers.authorization?.split(' ')[1] || req.session.gitlabToken;
+  if (!token) return res.status(401).json({ error: 1, msg: 'GitLab access token missing' });
+
+  const projectPath = encodeURIComponent(`${namespace}/${repo}`);
+  try {
+    const resp = await axios.get(`https://gitlab.com/api/v4/projects/${projectPath}/repository/branches`, { headers: gitlabHeaders(token) });
+    const branches = Array.isArray(resp.data) ? resp.data.map(b => b.name) : [];
+    res.json({ error: 0, msg: 'success', branches });
+  } catch (err) {
+    res.status(500).json({ error: 1, msg: 'Failed to fetch GitLab branches', details: err.response?.data || err.message });
+  }
+});
+
+// FILES (tree)
+app.get('/api/gitlab/files/:namespace/:repo/:branch', async (req, res) => {
+  const { namespace, repo, branch } = req.params;
+  const token = req.headers.authorization?.split(' ')[1] || req.session.gitlabToken;
+  if (!token) return res.status(401).json({ error: 1, msg: 'GitLab access token missing' });
+
+  const projectPath = encodeURIComponent(`${namespace}/${repo}`);
+  try {
+    const resp = await axios.get(
+      `https://gitlab.com/api/v4/projects/${projectPath}/repository/tree?ref=${encodeURIComponent(branch)}&recursive=true&per_page=200`,
+      { headers: gitlabHeaders(token) }
+    );
+    // normalize like GitHub: return raw array of files
+    res.json(resp.data);
+  } catch (err) {
+    res.status(500).json({ error: 1, msg: 'Failed to fetch GitLab files', details: err.response?.data || err.message });
+  }
+});
+
+// CONTENT (raw file)
+app.get('/api/gitlab/content/:namespace/:repo/:branch/*', async (req, res) => {
+  const { namespace, repo, branch } = req.params;
+  const filePath = req.params[0];
+  const token = req.headers.authorization?.split(' ')[1] || req.session.gitlabToken;
+  if (!token) return res.status(401).json({ error: 1, msg: 'GitLab access token missing' });
+
+  const projectPath = encodeURIComponent(`${namespace}/${repo}`);
+  const url = `https://gitlab.com/api/v4/projects/${projectPath}/repository/files/${encodeURIComponent(filePath)}/raw?ref=${encodeURIComponent(branch)}`;
+
+  try {
+    const resp = await axios.get(url, { headers: gitlabHeaders(token), responseType: 'arraybuffer' });
+    res.set('Content-Type', resp.headers['content-type'] || 'application/octet-stream');
+    res.send(resp.data); // raw like GitHub
+  } catch (err) {
+    res.status(500).json({ error: 1, msg: 'Failed to fetch GitLab file content', details: err.response?.data || err.message });
+  }
+});
+
 
 // ---------------------- Bitbucket section (added) ----------------------
 // OAuth login
@@ -749,20 +810,131 @@ app.get('/api/bitbucket/user', async (req, res) => {
 
 
 
-// List repos accessible to user (paginated)
+// // List repos accessible to user (paginated)
+// app.get('/api/bitbucket/repos', async (req, res) => {
+//   const token = req.headers.authorization?.split(' ')[1] || req.session.bitbucketToken;
+//   if (!token) return res.status(401).json({ error: 1, msg: 'Bitbucket access token missing' });
+
+//   try {
+//     const resp = await axios.get('https://api.bitbucket.org/2.0/repositories?role=member', { headers: bitbucketHeaders(token), timeout: 15000 });
+//     res.json(resp.data);
+//   } catch (err) {
+//     console.error('Bitbucket repos error:', err.response?.status, err.response?.data || err.message);
+//     res.status(500).json({ error: 1, msg: 'Failed to fetch Bitbucket repos', details: err.response?.data || err.message });
+//   }
+// });
+
+
+
 app.get('/api/bitbucket/repos', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1] || req.session.bitbucketToken;
   if (!token) return res.status(401).json({ error: 1, msg: 'Bitbucket access token missing' });
 
   try {
-    const resp = await axios.get('https://api.bitbucket.org/2.0/repositories?role=member', { headers: bitbucketHeaders(token), timeout: 15000 });
-    res.json(resp.data);
+    const resp = await axios.get('https://api.bitbucket.org/2.0/repositories?role=member', { headers: bitbucketHeaders(token) });
+    const repos = resp.data.values.map(repo => ({
+      error: 0,
+      msg: 'success',
+      id: 0,
+      node_id: repo.uuid,
+      name: repo.name,
+      full_name: repo.full_name,
+      private: repo.is_private,
+      owner: {
+        login: repo.owner?.username || repo.workspace?.slug,
+        id: 0,
+        node_id: repo.owner?.uuid || repo.workspace?.uuid,
+        type: 'User',
+        site_admin: false
+      },
+      html_url: repo.links.html.href,
+      description: repo.description,
+      fork: repo.parent ? true : false,
+      url: repo.links.self.href,
+      created_at: repo.created_on,
+      updated_at: repo.updated_on,
+      pushed_at: repo.updated_on,
+      clone_url: repo.links.clone?.[0]?.href,
+      svn_url: repo.links.clone?.[1]?.href,
+      size: repo.size || 0,
+      stargazers_count: 0,
+      watchers_count: 0,
+      language: repo.language,
+      disabled: false,
+      open_issues_count: 0,
+      visibility: repo.is_private ? 'private' : 'public',
+      default_branch: repo.mainbranch?.name || 'master',
+      permissions: {
+        admin: true,
+        maintain: false,
+        push: true,
+        triage: false,
+        pull: true
+      }
+    }));
+    res.json(repos);
   } catch (err) {
-    console.error('Bitbucket repos error:', err.response?.status, err.response?.data || err.message);
     res.status(500).json({ error: 1, msg: 'Failed to fetch Bitbucket repos', details: err.response?.data || err.message });
   }
 });
 
+
+
+// BRANCHES
+app.get('/api/bitbucket/branches/:workspace/:repo', async (req, res) => {
+  const { workspace, repo } = req.params;
+  const token = req.headers.authorization?.split(' ')[1] || req.session.bitbucketToken;
+  if (!token) return res.status(401).json({ error: 1, msg: 'Bitbucket access token missing' });
+
+  try {
+    const resp = await axios.get(
+      `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(repo)}/refs/branches`,
+      { headers: bitbucketHeaders(token) }
+    );
+    const branches = (resp.data?.values || []).map(b => b.name);
+    res.json({ error: 0, msg: 'success', branches });
+  } catch (err) {
+    res.status(500).json({ error: 1, msg: 'Failed to fetch Bitbucket branches', details: err.response?.data || err.message });
+  }
+});
+
+// FILES (tree)
+app.get('/api/bitbucket/files/:workspace/:repo/:branch', async (req, res) => {
+  const { workspace, repo, branch } = req.params;
+  const token = req.headers.authorization?.split(' ')[1] || req.session.bitbucketToken;
+  if (!token) return res.status(401).json({ error: 1, msg: 'Bitbucket access token missing' });
+
+  try {
+    const resp = await axios.get(
+      `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(repo)}/src/${encodeURIComponent(branch)}/`,
+      { headers: bitbucketHeaders(token) }
+    );
+    // normalize to match GitHub "tree" = raw array of files/dirs
+    res.json(resp.data.values || []);
+  } catch (err) {
+    res.status(500).json({ error: 1, msg: 'Failed to fetch Bitbucket files', details: err.response?.data || err.message });
+  }
+});
+
+// CONTENT (raw file)
+app.get('/api/bitbucket/content/:workspace/:repo/:branch/*', async (req, res) => {
+  const { workspace, repo, branch } = req.params;
+  const filePath = req.params[0];
+  const token = req.headers.authorization?.split(' ')[1] || req.session.bitbucketToken;
+  if (!token) return res.status(401).json({ error: 1, msg: 'Bitbucket access token missing' });
+
+  const url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(repo)}/src/${encodeURIComponent(branch)}/${filePath}`;
+  try {
+    const resp = await axios.get(url, { headers: bitbucketHeaders(token), responseType: 'arraybuffer' });
+    res.set('Content-Type', resp.headers['content-type'] || 'application/octet-stream');
+    res.send(resp.data); // raw like GitHub
+  } catch (err) {
+    res.status(500).json({ error: 1, msg: 'Failed to fetch Bitbucket file content', details: err.response?.data || err.message });
+  }
+});
+
+
+/*
 // Get branches for repo: /api/bitbucket/branches/:workspace/:repo
 app.get('/api/bitbucket/branches/:workspace/:repo', async (req, res) => {
   const { workspace, repo } = req.params;
@@ -812,6 +984,11 @@ app.get('/api/bitbucket/content/:workspace/:repo/:branch/*', async (req, res) =>
     res.status(500).json({ error: 1, msg: 'Failed to fetch Bitbucket file content', details: err.response?.data || err.message });
   }
 });
+
+
+*/
+
+
 
 // --------------------------------------------------------------------------------------------
 
