@@ -283,7 +283,7 @@ app.get('/auth/github/callback', async (req, res) => {
         user_name: username || 'unknown',
         email: email || 'unknown@example.com',
         client_access_token: access_token,
-        git_secret: process.env.GIT_SECRET || 'placeholder'
+        git_secret: process.env.GITHUB_SECRET || 'github'
       }, { timeout: 10000 });
 
       console.log('storeToken response status:', storeResp.status);
@@ -435,7 +435,7 @@ app.get('/auth/gitlab/callback', async (req, res) => {
         user_name: username || 'unknown',
         email: email || 'unknown@example.com',
         client_access_token: access_token,
-        git_secret: process.env.GIT_SECRET || 'placeholder',
+        git_secret: process.env.GITLAB_SECRET || 'gitlab',
         provider: 'gitlab'
       }, { timeout: 10000 });
 
@@ -716,7 +716,7 @@ app.get('/auth/bitbucket/callback', async (req, res) => {
         user_name: username || 'unknown',
         email: email || 'unknown@example.com',
         client_access_token: access_token,
-        git_secret: process.env.GIT_SECRET || 'placeholder',
+        git_secret: process.env.BITBUCKET_SECRET || 'bitbucket',
         provider: 'bitbucket'
       }, { timeout: 10000 });
 
